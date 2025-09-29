@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental Property ROI Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* Custom styles for a better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 280px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -140px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            font-weight: normal;
+            line-height: 1.5;
+        }
+        .tooltip .tooltiptext-formula {
+            font-family: monospace;
+            background-color: #444;
+            padding: 5px;
+            border-radius: 4px;
+            margin-top: 5px;
+            display: block;
+            white-space: pre-wrap;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* Style for the details/summary accordion */
+        details > summary {
+            list-style: none;
+            cursor: pointer;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        details .summary-icon {
+            transition: transform 0.2s;
+        }
+        details[open] .summary-icon {
+            transform: rotate(90deg);
+        }
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 2s linear infinite; /* Safari */
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Rental Property ROI Calculator</h1>
+            <p class="text-md text-gray-600 mt-2">Analyze potential investment properties with detailed financial projections.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Side: Inputs -->
+            <div class="lg:col-span-2 space-y-6">
+                 <!-- Property Details Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">
+                        Property Details
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Enter the address and a link to the online listing for this property.</p>
+                    <div class="space-y-4 mt-4">
+                        <div>
+                            <label for="propertyAddress" class="block text-sm font-medium text-gray-700">Property Address</label>
+                            <input type="text" id="propertyAddress" placeholder="123 Main St, Anytown, USA" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="listingLink" class="block text-sm font-medium text-gray-700">Listing Link (URL)</label>
+                            <input type="url" id="listingLink" placeholder="https://www.example.com/listing/123" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Purchase Information Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">
+                        Purchase Information
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Enter the core details about the property purchase price and initial costs.</p>
+                    <div class="space-y-4 mt-4">
+                        <div>
+                            <label for="purchasePrice" class="block text-sm font-medium text-gray-700">Purchase Price ($) <span class="tooltip">ⓘ<span class="tooltiptext">The total purchase price of the property.</span></span></label>
+                            <input type="text" id="purchasePrice" value="300,000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="closingCosts" class="block text-sm font-medium text-gray-700">Closing Costs (%) <span class="tooltip">ⓘ<span class="tooltiptext">Costs associated with completing the real estate transaction, typically 2-5% of the purchase price.</span></span></label>
+                            <input type="number" id="closingCosts" value="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="renovationCosts" class="block text-sm font-medium text-gray-700">Initial Renovation Costs ($) <span class="tooltip">ⓘ<span class="tooltiptext">Upfront costs for any repairs or improvements needed before renting out the property.</span></span></label>
+                            <input type="text" id="renovationCosts" value="10,000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Loan & Financing Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">Loan & Financing
+                         <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Provide the details for the mortgage used to finance the purchase.</p>
+                    <div class="space-y-4 mt-4">
+                        <div class="flex items-end space-x-2">
+                             <div class="flex-grow">
+                                <label for="downPayment" class="block text-sm font-medium text-gray-700">Down Payment <span class="tooltip">ⓘ<span class="tooltiptext">The amount of money you pay upfront. Can be a percentage of the purchase price or a fixed dollar amount.</span></span></label>
+                                <input type="number" id="downPayment" value="20" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <select id="downPaymentType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="percent" selected>%</option>
+                                    <option value="amount">$</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">Calculated Amount: <span id="downPaymentAmountCalculated" class="font-semibold"></span></div>
+                        <div>
+                            <label for="interestRate" class="block text-sm font-medium text-gray-700">Loan Interest Rate (%) <span class="tooltip">ⓘ<span class="tooltiptext">The annual interest rate for the loan.</span></span></label>
+                            <input type="number" id="interestRate" value="6.5" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="loanTerm" class="block text-sm font-medium text-gray-700">Loan Term (Years) <span class="tooltip">ⓘ<span class="tooltiptext">The number of years over which the loan will be repaid.</span></span></label>
+                            <input type="number" id="loanTerm" value="30" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    <div id="financingDetails" class="mt-6"></div>
+                </details>
+
+                <!-- Rental Income Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">Rental Income
+                         <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Detail the expected monthly income generated by the property.</p>
+                    <div class="space-y-4 mt-4">
+                        <div>
+                            <label for="monthlyRent" class="block text-sm font-medium text-gray-700">Gross Monthly Rent ($) <span class="tooltip">ⓘ<span class="tooltiptext">The total rent collected from all units per month.</span></span></label>
+                            <input type="text" id="monthlyRent" value="2,500" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="otherIncome" class="block text-sm font-medium text-gray-700">Other Monthly Income ($) <span class="tooltip">ⓘ<span class="tooltiptext">Additional income from sources like parking, laundry, or pet fees.</span></span></label>
+                            <input type="text" id="otherIncome" value="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="vacancyRate" class="block text-sm font-medium text-gray-700">Vacancy Rate (%) <span class="tooltip">ⓘ<span class="tooltiptext">The percentage of time the property is expected to be unoccupied.</span></span></label>
+                            <input type="number" id="vacancyRate" value="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div class="text-sm text-gray-600 pt-2 border-t">Annual Gross Income: <span id="annualGrossIncome" class="font-semibold"></span></div>
+                    </div>
+                </details>
+
+                <!-- Expenses Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md">
+                     <summary class="font-semibold text-lg flex justify-between items-center">Monthly Operating Expenses
+                         <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                     </summary>
+                     <p class="text-sm text-gray-500 mt-2 mb-4">Account for the ongoing monthly costs to operate the property.</p>
+                     <div class="grid grid-cols-2 gap-4 mt-4">
+                         <div>
+                             <label for="propertyTaxes" class="block text-sm font-medium text-gray-700">Taxes ($) <span class="tooltip">ⓘ<span class="tooltiptext">Monthly property taxes.</span></span></label>
+                             <input type="text" id="propertyTaxes" value="300" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="propertyInsurance" class="block text-sm font-medium text-gray-700">Insurance ($) <span class="tooltip">ⓘ<span class="tooltiptext">Monthly property insurance premium.</span></span></label>
+                             <input type="text" id="propertyInsurance" value="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="hoaFees" class="block text-sm font-medium text-gray-700">HOA Fees ($) <span class="tooltip">ⓘ<span class="tooltiptext">Monthly Homeowners Association fees, if any.</span></span></label>
+                             <input type="text" id="hoaFees" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="managementFee" class="block text-sm font-medium text-gray-700">Mgmt Fee (%) <span class="tooltip">ⓘ<span class="tooltiptext">Fee paid to a property management company, typically a percentage of collected rent.</span></span></label>
+                             <input type="number" id="managementFee" value="8" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="maintenance" class="block text-sm font-medium text-gray-700">Maintenance (%) <span class="tooltip">ⓘ<span class="tooltiptext">Funds set aside for routine repairs and upkeep. Calculated as a percentage of gross rental income.</span></span></label>
+                             <input type="number" id="maintenance" value="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="capex" class="block text-sm font-medium text-gray-700">CapEx (%) <span class="tooltip">ⓘ<span class="tooltiptext">Capital Expenditures. Funds for major, infrequent expenses like a new roof or water heater. Calculated as a percentage of gross rental income.</span></span></label>
+                             <input type="number" id="capex" value="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                     </div>
+                </details>
+
+                <!-- Assumptions Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md">
+                     <summary class="font-semibold text-lg flex justify-between items-center">Long-Term Assumptions (Annual)
+                         <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                     </summary>
+                     <p class="text-sm text-gray-500 mt-2 mb-4">Set annual growth and inflation rates to project future performance.</p>
+                     <div class="grid grid-cols-2 gap-4 mt-4">
+                         <div>
+                             <label for="appreciationRate" class="block text-sm font-medium text-gray-700">Appreciation <span class="tooltip">ⓘ<span class="tooltiptext">The estimated annual increase in the property's value.</span></span></label>
+                             <input type="number" id="appreciationRate" value="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                             <label for="rentIncreaseRate" class="block text-sm font-medium text-gray-700">Rent Increase <span class="tooltip">ⓘ<span class="tooltiptext">The estimated annual increase in rental income.</span></span></label>
+                             <input type="number" id="rentIncreaseRate" value="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                            <label for="expenseInflationRate" class="block text-sm font-medium text-gray-700">Inflation <span class="tooltip">ⓘ<span class="tooltiptext">The estimated annual increase in operating expenses.</span></span></label>
+                             <input type="number" id="expenseInflationRate" value="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div>
+                            <label for="yearsToSell" class="block text-sm font-medium text-gray-700">Years to Sell <span class="tooltip">ⓘ<span class="tooltiptext">The number of years you plan to hold the property before selling.</span></span></label>
+                             <input type="number" id="yearsToSell" value="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                         </div>
+                         <div class="col-span-2">
+                            <label for="projectedSellPrice" class="block text-sm font-medium text-gray-700">Projected Sell Price ($) <span class="tooltip">ⓘ<span class="tooltiptext">Auto-calculated based on appreciation. You can override it by typing a new value.</span></span></label>
+                             <input type="text" id="projectedSellPrice" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-100">
+                         </div>
+                     </div>
+                </details>
+                
+                <!-- Save/Load Analysis Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md">
+                    <summary class="font-semibold text-lg flex justify-between items-center">Save & Load Analysis
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <div class="space-y-4 mt-4">
+                        <button id="saveAnalysisBtn" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Current Analysis
+                        </button>
+                        <div class="flex items-center space-x-2">
+                            <select id="loadAnalysisSelect" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option>No saved analyses</option>
+                            </select>
+                            <button id="loadAnalysisBtn" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Load
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Right Side: Outputs -->
+            <div class="lg:col-span-3 space-y-6">
+                 <!-- Gemini AI Insights Section -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">✨ Gemini AI Insights
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Get AI-powered analysis and local market data to inform your investment decision.</p>
+                    <div class="space-y-4 mt-4">
+                        <button id="analyzeDealBtn" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            ✨ Analyze This Deal
+                        </button>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="zipCodeInput" placeholder="Enter Property ZIP Code" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <button id="marketInsightsBtn" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Get Local Insights
+                            </button>
+                        </div>
+                        <div id="geminiOutput" class="mt-4 p-4 bg-gray-50 rounded-lg min-h-[100px] text-sm text-gray-700 prose max-w-none">
+                            Your AI analysis will appear here.
+                        </div>
+                    </div>
+                </details>
+
+                 <!-- Key Metrics -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">Key Performance Metrics
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <div class="mt-4 space-y-6">
+                        <!-- Row 1 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Annualized Return <span class="text-xs">(Annual)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="annualizedReturnTooltip"></span></span>
+                                </h3>
+                                <p id="annualizedReturn" class="text-2xl font-semibold text-blue-600"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Total Closing Cash
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="totalCashNeededTooltip"></span></span>
+                                </h3>
+                                <p id="totalCashNeeded" class="text-2xl font-semibold text-gray-900"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Interest Paid <span class="text-xs">(Annual)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext">The total interest portion of your mortgage payments in the first year.</span></span>
+                                </h3>
+                                <p id="interestPaidKpi" class="text-2xl font-semibold text-gray-900"></p>
+                            </div>
+                        </div>
+                        <!-- Row 2 -->
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">NOI <span class="text-xs">(Annual)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="noiTooltip"></span></span>
+                                </h3>
+                                <p id="noi" class="text-2xl font-semibold text-gray-900"></p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Cash Flow <span class="text-xs">(Monthly)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="monthlyCashFlowTooltip"></span></span>
+                                </h3>
+                                <p id="monthlyCashFlow" class="text-2xl font-semibold"></p>
+                            </div>
+                             <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Cash Flow (Pre-Principal) <span class="text-xs">(Annual)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="cashFlowBeforePrincipalTooltip"></span></span>
+                                </h3>
+                                <p id="cashFlowBeforePrincipal" class="text-2xl font-semibold text-gray-900"></p>
+                            </div>
+                        </div>
+                        <!-- Row 3 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Cap Rate
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="capRateTooltip"></span></span>
+                                </h3>
+                                <p id="capRate" class="text-2xl font-semibold"></p>
+                            </div>
+                            <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Cash on Cash ROI
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="cashOnCashROITooltip"></span></span>
+                                </h3>
+                                <p id="cashOnCashROI" class="text-2xl font-semibold"></p>
+                            </div>
+                             <div class="bg-teal-50 p-4 rounded-lg text-center">
+                                <h3 class="text-sm font-medium text-gray-500">Est. Tax Saved <span class="text-xs">(Annual)</span>
+                                    <span class="tooltip">ⓘ<span class="tooltiptext" id="estTaxSavedTooltip"></span></span>
+                                </h3>
+                                <p id="estTaxSaved" class="text-2xl font-semibold"></p>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+                
+                 <!-- Tax Analysis -->
+                <details class="bg-white p-5 rounded-xl shadow-md">
+                    <summary class="font-semibold text-lg flex justify-between items-center">Year 1 Tax Analysis
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-2 gap-6">
+                         <div>
+                            <label for="incomeTaxRate" class="block text-sm font-medium text-gray-700">Income Tax Rate (%)</label>
+                            <input type="number" id="incomeTaxRate" value="35" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Est. Tax Saved/Owed
+                                <span class="tooltip">ⓘ<span class="tooltiptext" id="taxSavedOrOwedTooltip"></span></span>
+                            </h3>
+                            <p id="taxSavedOrOwed" class="text-xl font-semibold mt-1"></p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Est. Taxable Income/Loss
+                                <span class="tooltip">ⓘ<span class="tooltiptext" id="taxableIncomeTooltip"></span></span>
+                            </h3>
+                            <p id="taxableIncome" class="text-xl font-semibold mt-1"></p>
+                        </div>
+                         <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Total Deductible Expenses
+                                <span class="tooltip">ⓘ<span class="tooltiptext" id="totalDeductionsTooltip"></span></span>
+                            </h3>
+                            <p id="totalDeductions" class="text-xl font-semibold text-gray-900 mt-1"></p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg col-span-2">
+                            <h3 class="text-sm font-medium text-gray-500">Property Depreciation
+                                <span class="tooltip">ⓘ<span class="tooltiptext" id="propertyDepreciationTooltip"></span></span>
+                            </h3>
+                            <p id="propertyDepreciation" class="text-xl font-semibold text-gray-900 mt-1"></p>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Charts -->
+                <details class="bg-white p-5 rounded-xl shadow-md" open>
+                    <summary class="font-semibold text-lg flex justify-between items-center">10-Year Projections
+                        <svg class="w-5 h-5 summary-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </summary>
+                    <div class="mt-4 space-y-8">
+                        <div>
+                            <h3 class="font-medium text-center">Financial Performance (NOI vs. Debt)</h3>
+                            <canvas id="financialPerformanceChart"></canvas>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-center">Wealth Growth (Equity)</h3>
+                            <canvas id="wealthGrowthChart"></canvas>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </main>
+    </div>
+
+    <!-- Save Analysis Modal -->
+    <div id="saveModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Save Analysis</h3>
+                <div class="mt-2 px-7 py-3">
+                    <label for="analysisNameInput" class="block text-sm font-medium text-gray-700 text-left">Analysis Name</label>
+                    <input type="text" id="analysisNameInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g., Main St Property">
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="saveConfirmBtn" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save
+                    </button>
+                    <button id="saveCancelBtn" class="ml-2 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-md transition-opacity duration-300 opacity-0 z-50">
+        Analysis saved!
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const allInputs = document.querySelectorAll('input, select');
+            const savableInputIds = ['propertyAddress', 'listingLink', 'purchasePrice', 'closingCosts', 'renovationCosts', 'downPayment', 'downPaymentType', 'interestRate', 'loanTerm', 'monthlyRent', 'otherIncome', 'vacancyRate', 'propertyTaxes', 'propertyInsurance', 'hoaFees', 'managementFee', 'maintenance', 'capex', 'appreciationRate', 'rentIncreaseRate', 'expenseInflationRate', 'yearsToSell', 'projectedSellPrice', 'incomeTaxRate'];
+            const currencyInputs = ['purchasePrice', 'renovationCosts', 'monthlyRent', 'otherIncome', 'propertyTaxes', 'propertyInsurance', 'hoaFees', 'projectedSellPrice'];
+            const outputs = {
+                totalCashNeeded: document.getElementById('totalCashNeeded'),
+                monthlyCashFlow: document.getElementById('monthlyCashFlow'),
+                cashOnCashROI: document.getElementById('cashOnCashROI'),
+                capRate: document.getElementById('capRate'),
+                noi: document.getElementById('noi'),
+                taxableIncome: document.getElementById('taxableIncome'),
+                totalDeductions: document.getElementById('totalDeductions'),
+                propertyDepreciation: document.getElementById('propertyDepreciation'),
+                interestPaidKpi: document.getElementById('interestPaidKpi'),
+                downPaymentAmountCalculated: document.getElementById('downPaymentAmountCalculated'),
+                financingDetails: document.getElementById('financingDetails'),
+                annualizedReturn: document.getElementById('annualizedReturn'),
+                annualGrossIncome: document.getElementById('annualGrossIncome'),
+                cashFlowBeforePrincipal: document.getElementById('cashFlowBeforePrincipal'),
+                geminiOutput: document.getElementById('geminiOutput'),
+                estTaxSaved: document.getElementById('estTaxSaved'),
+                taxSavedOrOwed: document.getElementById('taxSavedOrOwed'),
+            };
+            const tooltips = {
+                totalCashNeeded: document.getElementById('totalCashNeededTooltip'),
+                monthlyCashFlow: document.getElementById('monthlyCashFlowTooltip'),
+                cashOnCashROI: document.getElementById('cashOnCashROITooltip'),
+                capRate: document.getElementById('capRateTooltip'),
+                noi: document.getElementById('noiTooltip'),
+                taxableIncome: document.getElementById('taxableIncomeTooltip'),
+                totalDeductions: document.getElementById('totalDeductionsTooltip'),
+                propertyDepreciation: document.getElementById('propertyDepreciationTooltip'),
+                annualizedReturn: document.getElementById('annualizedReturnTooltip'),
+                cashFlowBeforePrincipal: document.getElementById('cashFlowBeforePrincipalTooltip'),
+                estTaxSaved: document.getElementById('estTaxSavedTooltip'),
+                taxSavedOrOwed: document.getElementById('taxSavedOrOwedTooltip'),
+            };
+            const geminiButtons = {
+                analyze: document.getElementById('analyzeDealBtn'),
+                market: document.getElementById('marketInsightsBtn'),
+                zipCode: document.getElementById('zipCodeInput'),
+            };
+            const storageButtons = {
+                save: document.getElementById('saveAnalysisBtn'),
+                load: document.getElementById('loadAnalysisBtn'),
+                select: document.getElementById('loadAnalysisSelect'),
+                modal: document.getElementById('saveModal'),
+                confirmSave: document.getElementById('saveConfirmBtn'),
+                cancelSave: document.getElementById('saveCancelBtn'),
+                nameInput: document.getElementById('analysisNameInput')
+            };
+
+            const ctx1 = document.getElementById('financialPerformanceChart').getContext('2d');
+            const ctx2 = document.getElementById('wealthGrowthChart').getContext('2d');
+            let financialChart, wealthChart;
+
+            // --- Helper Functions ---
+            const unformatCurrency = (val) => parseFloat(String(val).replace(/[^0-9.-]+/g, "")) || 0;
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                // For regular text inputs like address, just get the value
+                if (el.type === 'text' && !currencyInputs.includes(id)) {
+                    return el.value;
+                }
+                 if (el.type === 'url') {
+                    return el.value;
+                }
+                return el.tagName === 'SELECT' ? el.value : (currencyInputs.includes(id) ? unformatCurrency(el.value) : (parseFloat(el.value) || 0));
+            };
+            const formatCurrency = (val, decimals = 0) => {
+                if (typeof val !== 'number' || isNaN(val)) {
+                    val = 0;
+                }
+                return val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            }
+            const formatPercent = (val) => `${val.toFixed(2)}%`;
+            const formatInteger = (val) => Math.round(val).toLocaleString('en-US');
+            
+            // Simple markdown to HTML converter
+            function markdownToHtml(md) {
+                md = md.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+                md = md.replace(/### (.*$)/gim, '<h3 class="text-lg font-semibold mb-2">$1</h3>'); // H3
+                md = md.replace(/## (.*$)/gim, '<h2 class="text-xl font-bold mb-3">$1</h2>'); // H2
+                md = md.replace(/^[\s]*[-\*] (.*$)/gim, '<li class="ml-4 list-disc">$1</li>'); // Lists
+                md = md.replace(/<\/li>\n<li/g, '</li><li'); // Fix list spacing
+                md = md.replace(/(<li.*<\/li>)/gs, '<ul>$1</ul>'); // Wrap lists
+                return md.replace(/\n/g, '<br>');
+            }
+            
+            function showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.remove('opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('opacity-0');
+                }, 3000); // Hide after 3 seconds
+            }
+
+            // --- Number Input Formatting ---
+            function formatInputAsCurrency(e) {
+                let input = e.target;
+                let value = input.value;
+                let originalLength = value.length;
+                let cursorPosition = input.selectionStart;
+                
+                let numericValue = unformatCurrency(value);
+                if (isNaN(numericValue)) return;
+
+                let formattedValue = numericValue.toLocaleString('en-US');
+                if (value.endsWith('.') || value.endsWith('.0')) { // Allow typing decimals
+                    formattedValue = numericValue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+                } else if (value.includes('.')) {
+                    const [integer, fraction] = value.split('.');
+                    formattedValue = parseInt(integer.replace(/,/g, '')).toLocaleString('en-US') + '.' + fraction;
+                }
+                
+                if(value === "") formattedValue = "";
+
+                input.value = formattedValue;
+                
+                let newLength = formattedValue.length;
+                let newCursorPosition = cursorPosition + (newLength - originalLength);
+                if (newCursorPosition < 0) newCursorPosition = 0;
+                input.setSelectionRange(newCursorPosition, newCursorPosition);
+            }
+
+            currencyInputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', formatInputAsCurrency);
+            });
+
+            // --- Core Calculation Logic ---
+            let currentCalculatedData = {};
+            function calculate() {
+                // --- Gather Inputs ---
+                const purchasePrice = getVal('purchasePrice');
+                const closingCostsPercent = getVal('closingCosts') / 100;
+                const renovationCosts = getVal('renovationCosts');
+                const downPayment = getVal('downPayment');
+                const downPaymentType = getVal('downPaymentType');
+                const interestRatePercent = getVal('interestRate');
+                const loanTermYears = getVal('loanTerm');
+                const monthlyRent = getVal('monthlyRent');
+                const otherIncome = getVal('otherIncome');
+                const vacancyRate = getVal('vacancyRate') / 100;
+                const propertyTaxes = getVal('propertyTaxes');
+                const propertyInsurance = getVal('propertyInsurance');
+                const hoaFees = getVal('hoaFees');
+                const managementFeePercent = getVal('managementFee') / 100;
+                const maintenancePercent = getVal('maintenance') / 100;
+                const capexPercent = getVal('capex') / 100;
+                const appreciationRate = getVal('appreciationRate') / 100;
+                const rentIncreaseRate = getVal('rentIncreaseRate') / 100;
+                const expenseInflationRate = getVal('expenseInflationRate') / 100;
+                const yearsToSell = getVal('yearsToSell');
+                const incomeTaxRate = getVal('incomeTaxRate') / 100;
+                let projectedSellPrice = getVal('projectedSellPrice');
+
+                // Auto-calculate sell price if input is not focused
+                if (document.activeElement.id !== 'projectedSellPrice') {
+                    projectedSellPrice = purchasePrice * Math.pow((1 + appreciationRate), yearsToSell);
+                    document.getElementById('projectedSellPrice').value = Math.round(projectedSellPrice).toLocaleString('en-US');
+                }
+                
+                // --- Calculations: Purchase & Loan ---
+                const closingCosts = purchasePrice * closingCostsPercent;
+                const downPaymentAmount = downPaymentType === 'percent' ? purchasePrice * (downPayment / 100) : downPayment;
+                outputs.downPaymentAmountCalculated.textContent = formatCurrency(downPaymentAmount);
+                const totalCashNeeded = downPaymentAmount + closingCosts + renovationCosts;
+                const loanAmount = purchasePrice - downPaymentAmount;
+
+                // --- Calculations: Mortgage ---
+                const monthlyInterestRate = (interestRatePercent / 100) / 12;
+                const numberOfPayments = loanTermYears * 12;
+                let monthlyMortgage = 0;
+                if (monthlyInterestRate > 0 && numberOfPayments > 0) {
+                     monthlyMortgage = loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
+                } else if (loanAmount > 0 && numberOfPayments > 0) {
+                    monthlyMortgage = loanAmount / numberOfPayments;
+                }
+                const annualDebtService = monthlyMortgage * 12;
+                
+                // --- Calculations: Income ---
+                const grossMonthlyIncome = monthlyRent + otherIncome;
+                const grossAnnualIncome = grossMonthlyIncome * 12;
+                outputs.annualGrossIncome.textContent = formatCurrency(grossAnnualIncome);
+                const effectiveGrossIncome = grossAnnualIncome * (1 - vacancyRate);
+
+                // --- Calculations: Expenses ---
+                const managementFee = effectiveGrossIncome * managementFeePercent;
+                const maintenance = effectiveGrossIncome * maintenancePercent;
+                const capex = effectiveGrossIncome * capexPercent;
+                const totalOperatingExpenses = (propertyTaxes * 12) + (propertyInsurance * 12) + (hoaFees * 12) + managementFee + maintenance + capex;
+
+                // --- Calculations: Key Metrics ---
+                const noi = effectiveGrossIncome - totalOperatingExpenses;
+                const annualCashFlow = noi - annualDebtService;
+                const monthlyCashFlow = annualCashFlow / 12;
+                const cashOnCashROI = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded) * 100 : 0;
+                const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+
+                // --- Calculations: Tax Analysis (Year 1) ---
+                const landValue = purchasePrice * 0.20; // Assumption
+                const depreciableBasis = purchasePrice - landValue; // IRS rules generally don't include closing/reno costs here
+                const annualDepreciation = depreciableBasis / 27.5;
+                
+                let year1Interest = 0;
+                let balance = loanAmount;
+                const amortizationSchedule = [];
+                for (let year = 1; year <= Math.min(loanTermYears, 10); year++) {
+                    let yearlyPrincipal = 0;
+                    let yearlyInterest = 0;
+                    for (let month = 1; month <= 12; month++) {
+                         if (balance > 0) {
+                            const interestPayment = balance * monthlyInterestRate;
+                            const principalPayment = monthlyMortgage - interestPayment;
+                            balance -= principalPayment;
+                            yearlyInterest += interestPayment;
+                            yearlyPrincipal += principalPayment;
+                        }
+                    }
+                    amortizationSchedule.push({ year, principal: yearlyPrincipal, interest: yearlyInterest, balance: balance });
+                    if(year === 1) year1Interest = yearlyInterest;
+                }
+                
+                const totalDeductions = totalOperatingExpenses + year1Interest + annualDepreciation;
+                const taxableIncome = effectiveGrossIncome - totalDeductions;
+                const estTaxSaved = -taxableIncome * incomeTaxRate;
+                
+                // --- Update UI ---
+                outputs.totalCashNeeded.textContent = formatCurrency(totalCashNeeded);
+                outputs.monthlyCashFlow.textContent = formatCurrency(monthlyCashFlow);
+                outputs.cashOnCashROI.textContent = formatPercent(cashOnCashROI);
+                outputs.capRate.textContent = formatPercent(capRate);
+                outputs.noi.textContent = formatCurrency(noi);
+                outputs.interestPaidKpi.textContent = formatCurrency(year1Interest);
+                outputs.estTaxSaved.textContent = formatCurrency(estTaxSaved);
+                outputs.taxSavedOrOwed.textContent = formatCurrency(estTaxSaved);
+                outputs.taxableIncome.textContent = formatCurrency(taxableIncome);
+                outputs.totalDeductions.textContent = formatCurrency(totalDeductions);
+                outputs.propertyDepreciation.textContent = formatCurrency(annualDepreciation);
+                const cashFlowBeforePrincipal = noi - year1Interest;
+                outputs.cashFlowBeforePrincipal.textContent = formatCurrency(cashFlowBeforePrincipal);
+
+                // --- Chart & Sale Projections ---
+                const projectionYears = 10;
+                const labels = Array.from({ length: projectionYears }, (_, i) => `Year ${i + 1}`);
+                const projectedNOI = [];
+                const projectedDebtService = [];
+                const projectedInterest = [];
+                const projectedPropertyValue = [];
+                const projectedLoanBalance = [];
+                
+                let currentPropertyValue = purchasePrice;
+                let currentEGI = effectiveGrossIncome;
+                let currentOpEx = totalOperatingExpenses;
+                let currentLoanBalance = loanAmount;
+                let totalCashFlowOverHold = 0;
+                let loanBalanceAtSale = 0;
+
+                for (let year = 1; year <= Math.max(projectionYears, yearsToSell); year++) {
+                    if (year > 1) {
+                       currentEGI *= (1 + rentIncreaseRate);
+                       currentOpEx *= (1 + expenseInflationRate);
+                       currentPropertyValue *= (1 + appreciationRate);
+                    }
+                    
+                    let yearlyDebtService = 0;
+                    let yearlyInterest = 0;
+                    for (let month = 0; month < 12; month++) {
+                         if (currentLoanBalance > 0) {
+                            const interest = currentLoanBalance * monthlyInterestRate;
+                            const principal = monthlyMortgage - interest;
+                            currentLoanBalance -= principal;
+                            yearlyDebtService += monthlyMortgage;
+                            yearlyInterest += interest;
+                         }
+                    }
+                    currentLoanBalance = Math.max(0, currentLoanBalance);
+
+                    const projectedNOIForYear = currentEGI - currentOpEx;
+                    const cashFlowForYear = projectedNOIForYear - yearlyDebtService;
+
+                    if (year <= yearsToSell) {
+                        totalCashFlowOverHold += cashFlowForYear;
+                        loanBalanceAtSale = currentLoanBalance;
+                    }
+
+                    if (year <= projectionYears) {
+                        projectedNOI.push(projectedNOIForYear);
+                        projectedDebtService.push(yearlyDebtService);
+                        projectedInterest.push(yearlyInterest);
+                        projectedPropertyValue.push(currentPropertyValue);
+                        projectedLoanBalance.push(currentLoanBalance);
+                    }
+                }
+                
+                // --- Calculations: Annualized Return ---
+                const equityAtSale = projectedSellPrice - loanBalanceAtSale;
+                const totalReturnValue = totalCashFlowOverHold + equityAtSale;
+                let annualizedReturn = 0;
+                if(totalCashNeeded > 0 && totalReturnValue > 0 && yearsToSell > 0) {
+                    annualizedReturn = (Math.pow(totalReturnValue / totalCashNeeded, 1 / yearsToSell) - 1) * 100;
+                }
+                outputs.annualizedReturn.textContent = formatPercent(annualizedReturn);
+
+                // --- Update UI Colors ---
+                outputs.monthlyCashFlow.classList.toggle('text-red-600', monthlyCashFlow < 0);
+                outputs.monthlyCashFlow.classList.toggle('text-green-600', monthlyCashFlow >= 0);
+                outputs.taxableIncome.classList.toggle('text-red-600', taxableIncome < 0);
+                outputs.taxableIncome.classList.toggle('text-gray-900', taxableIncome >= 0);
+                outputs.estTaxSaved.classList.toggle('text-red-600', estTaxSaved < 0);
+                outputs.estTaxSaved.classList.toggle('text-teal-600', estTaxSaved >= 0);
+                outputs.taxSavedOrOwed.classList.toggle('text-red-600', estTaxSaved < 0);
+                outputs.taxSavedOrOwed.classList.toggle('text-green-600', estTaxSaved >= 0);
+
+                // Color code KPIs based on thresholds
+                ['text-green-600', 'text-yellow-500', 'text-red-600'].forEach(c => {
+                    outputs.capRate.classList.remove(c);
+                    outputs.cashOnCashROI.classList.remove(c);
+                });
+
+                if (capRate > 6) outputs.capRate.classList.add('text-green-600');
+                else if (capRate >= 4) outputs.capRate.classList.add('text-yellow-500');
+                else outputs.capRate.classList.add('text-red-600');
+
+                if (cashOnCashROI > 10) outputs.cashOnCashROI.classList.add('text-green-600');
+                else if (cashOnCashROI >= 5) outputs.cashOnCashROI.classList.add('text-yellow-500');
+                else outputs.cashOnCashROI.classList.add('text-red-600');
+
+
+                updateCharts(labels, projectedNOI, projectedDebtService, projectedInterest, projectedPropertyValue, projectedLoanBalance);
+                updateFinancingDetails(loanAmount, monthlyMortgage, amortizationSchedule);
+                
+                currentCalculatedData = {
+                    downPaymentAmount, closingCosts, renovationCosts, monthlyCashFlow, noi, annualDebtService, annualCashFlow, capRate, purchasePrice, effectiveGrossIncome, totalOperatingExpenses, totalDeductions, year1Interest, annualDepreciation, annualizedReturn, totalReturnValue, yearsToSell, cashFlowBeforePrincipal, cashOnCashROI, loanAmount, estTaxSaved, taxableIncome, incomeTaxRate
+                };
+                updateTooltips(currentCalculatedData);
+            }
+            
+            // --- Update Functions ---
+            function updateFinancingDetails(loanAmount, monthlyMortgage, amortization) {
+                if (!loanAmount) {
+                    outputs.financingDetails.innerHTML = "";
+                    return;
+                }
+                let tableHtml = `<h4 class="font-semibold text-md mb-2">Financing Summary</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+                        <p>Loan Principle: <strong class="block">${formatCurrency(loanAmount)}</strong></p>
+                        <p>Monthly P&I: <strong class="block">${formatCurrency(monthlyMortgage)}</strong></p>
+                    </div>
+                    <h5 class="font-semibold text-sm mb-2">Amortization (First 10 Years)</h5>
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-100"><tr><th class="p-2">Year</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>`;
+                amortization.forEach(row => {
+                    tableHtml += `<tr>
+                        <td class="p-2 font-medium">${row.year}</td>
+                        <td>${formatCurrency(row.principal)}</td>
+                        <td>${formatCurrency(row.interest)}</td>
+                        <td>${formatCurrency(row.balance)}</td>
+                    </tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+                outputs.financingDetails.innerHTML = tableHtml;
+            }
+
+            function updateTooltips(data) {
+                tooltips.totalCashNeeded.innerHTML = `The total cash required to close the deal.<span class="tooltiptext-formula">Down Payment + Closing Costs + Renovations<br>${formatCurrency(data.downPaymentAmount)} + ${formatCurrency(data.closingCosts)} + ${formatCurrency(data.renovationCosts)}</span>`;
+                tooltips.monthlyCashFlow.innerHTML = `The monthly profit left after all expenses and mortgage payments.<span class="tooltiptext-formula"> (NOI - Debt Service) / 12<br>(${formatCurrency(data.noi)} - ${formatCurrency(data.annualDebtService)}) / 12</span>`;
+                tooltips.cashOnCashROI.innerHTML = `The return on your actual cash invested.<span class="tooltiptext-formula">Annual Cash Flow / Total Cash Needed<br>${formatCurrency(data.annualCashFlow)} / ${formatCurrency(data.totalCashNeeded)}</span>`;
+                tooltips.capRate.innerHTML = `Capitalization Rate. A measure of the property's unleveraged return.<span class="tooltiptext-formula">NOI / Purchase Price<br>${formatCurrency(data.noi)} / ${formatCurrency(data.purchasePrice)}</span>`;
+                tooltips.noi.innerHTML = `Net Operating Income. Annual income after operating expenses, but before mortgage.<span class="tooltiptext-formula">Effective Gross Income - OpEx<br>${formatCurrency(data.effectiveGrossIncome)} - ${formatCurrency(data.totalOperatingExpenses)}</span>`;
+                tooltips.taxableIncome.innerHTML = `Estimated income/loss for tax purposes after all deductions.<span class="tooltiptext-formula">EGI - Total Deductions<br>${formatCurrency(data.effectiveGrossIncome)} - ${formatCurrency(data.totalDeductions)}</span>`;
+                tooltips.totalDeductions.innerHTML = `Sum of all tax-deductible expenses.<span class="tooltiptext-formula">OpEx + Interest + Depreciation<br>${formatCurrency(data.totalOperatingExpenses)} + ${formatCurrency(data.year1Interest)} + ${formatCurrency(data.annualDepreciation)}</span>`;
+                tooltips.propertyDepreciation.innerHTML = `Annual non-cash deduction based on a 27.5-year straight-line schedule (property value minus land).<span class="tooltiptext-formula">(Purchase Price * 0.8) / 27.5</span>`;
+                tooltips.annualizedReturn.innerHTML = `The geometric average rate of return per year, including cash flow and property sale.<span class="tooltiptext-formula">((Total Return / Cash Invested)^(1/Years)) - 1<br>((${formatCurrency(data.totalReturnValue)} / ${formatCurrency(data.totalCashNeeded)})^(1/${data.yearsToSell})) - 1</span>`;
+                tooltips.cashFlowBeforePrincipal.innerHTML = `The annual cash flow before paying the loan principal. This is a good measure of the property's ability to cover its operating costs and interest payments.<span class="tooltiptext-formula">NOI - Interest Paid<br>${formatCurrency(data.noi)} - ${formatCurrency(data.year1Interest)}</span>`;
+                const taxTooltipFormula = `-(Taxable Income * Tax Rate)<br>-(${formatCurrency(data.taxableIncome)} * ${data.incomeTaxRate*100}%)`;
+                if(tooltips.estTaxSaved) tooltips.estTaxSaved.innerHTML = `The estimated amount your tax bill will be reduced (or increased) by this investment in Year 1.<span class="tooltiptext-formula">${taxTooltipFormula}</span>`;
+                if(tooltips.taxSavedOrOwed) tooltips.taxSavedOrOwed.innerHTML = `The estimated amount your tax bill will be reduced (or increased) by this investment in Year 1.<span class="tooltiptext-formula">${taxTooltipFormula}</span>`;
+
+            }
+
+            function updateCharts(labels, noiData, debtData, interestData, propValueData, loanBalanceData) {
+                const chartOptions = {
+                    scales: { 
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { callback: (value) => formatInteger(value) }
+                        } 
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    }
+                };
+                if (financialChart) financialChart.destroy();
+                financialChart = new Chart(ctx1, { type: 'bar', data: { labels, datasets: [{ label: 'NOI', data: noiData, backgroundColor: 'rgba(75, 192, 192, 0.6)' }, { label: 'Total P&I', data: debtData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }, { label: 'Interest Only', data: interestData, backgroundColor: 'rgba(255, 205, 86, 0.6)' }] }, options: chartOptions });
+
+                if (wealthChart) wealthChart.destroy();
+                wealthChart = new Chart(ctx2, { type: 'line', data: { labels, datasets: [{ label: 'Property Value', data: propValueData, borderColor: 'rgba(54, 162, 235, 1)', fill: true, tension: 0.1 }, { label: 'Loan Balance', data: loanBalanceData, borderColor: 'rgba(255, 159, 64, 1)', fill: false, tension: 0.1 }] }, options: { ...chartOptions, scales: { y: { ...chartOptions.scales.y, beginAtZero: false } } } });
+            }
+
+            // --- Gemini API Integration ---
+            const API_KEY = ""; // Kept empty as per instructions
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+            
+            async function callGeminiAPI(prompt, useGrounding = false) {
+                outputs.geminiOutput.innerHTML = '<div class="flex justify-center items-center"><div class="loader"></div><p class="ml-2">Generating insights...</p></div>';
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: {
+                        parts: [{ text: "You are a seasoned real estate investment advisor. Provide a concise, insightful analysis based on the data provided. Use markdown for formatting, including headings and bullet points." }]
+                    },
+                };
+
+                if (useGrounding) {
+                    payload.tools = [{ "google_search": {} }];
+                }
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (text) {
+                       outputs.geminiOutput.innerHTML = markdownToHtml(text);
+                    } else {
+                       throw new Error("No content received from API.");
+                    }
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    outputs.geminiOutput.textContent = `Error: Could not retrieve analysis. ${error.message}`;
+                }
+            }
+            
+            geminiButtons.analyze.addEventListener('click', () => {
+                const { purchasePrice, monthlyRent, totalOperatingExpenses, loanAmount, annualCashFlow, cashOnCashROI, capRate } = currentCalculatedData;
+                const prompt = `
+                    Please analyze the following rental property investment deal and provide a summary of its strengths, weaknesses, and key considerations.
+                    
+                    **Property Financials:**
+                    - Purchase Price: ${formatCurrency(purchasePrice)}
+                    - Gross Monthly Rent: ${formatCurrency(monthlyRent)}
+                    - Total Annual Operating Expenses: ${formatCurrency(totalOperatingExpenses)}
+                    - Loan Amount: ${formatCurrency(loanAmount)}
+                    
+                    **Key Performance Metrics (Year 1):**
+                    - Annual Cash Flow: ${formatCurrency(annualCashFlow)}
+                    - Cash on Cash ROI: ${formatPercent(cashOnCashROI)}
+                    - Cap Rate: ${formatPercent(capRate)}
+
+                    Based on these numbers, what is your assessment of this deal?
+                `;
+                callGeminiAPI(prompt);
+            });
+            
+            geminiButtons.market.addEventListener('click', () => {
+                const zip = geminiButtons.zipCode.value;
+                if (!zip || !/^\d{5}$/.test(zip)) {
+                    outputs.geminiOutput.textContent = "Please enter a valid 5-digit US ZIP code.";
+                    return;
+                }
+                const prompt = `
+                    Provide a real estate investment analysis for ZIP code ${zip}. 
+                    Focus on information relevant to a rental property investor. Include:
+                    - A brief overview of the area.
+                    - Average rent for a single-family home or 2-bedroom apartment.
+                    - Recent property appreciation trends (e.g., last 1-3 years).
+                    - Overall market outlook and any notable factors (e.g., job growth, new developments, risks).
+                `;
+                callGeminiAPI(prompt, true); // Use grounding for real-time data
+            });
+
+            // --- Local Storage Save/Load ---
+            const STORAGE_INDEX_KEY = 'rental_analyses_index';
+
+            function populateLoadUI() {
+                const index = JSON.parse(localStorage.getItem(STORAGE_INDEX_KEY)) || [];
+                storageButtons.select.innerHTML = '';
+                if (index.length === 0) {
+                    storageButtons.select.innerHTML = '<option>No saved analyses</option>';
+                    storageButtons.load.disabled = true;
+                } else {
+                    index.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        storageButtons.select.appendChild(option);
+                    });
+                    storageButtons.load.disabled = false;
+                }
+            }
+
+            storageButtons.save.addEventListener('click', () => {
+                storageButtons.nameInput.value = document.getElementById('propertyAddress').value || '';
+                storageButtons.nameInput.classList.remove('border-red-500');
+                storageButtons.modal.classList.remove('hidden');
+            });
+
+            storageButtons.cancelSave.addEventListener('click', () => {
+                storageButtons.modal.classList.add('hidden');
+            });
+
+            storageButtons.confirmSave.addEventListener('click', () => {
+                const name = storageButtons.nameInput.value.trim();
+                if (!name) {
+                    storageButtons.nameInput.classList.add('border-red-500');
+                    return;
+                }
+
+                const saveData = {};
+                savableInputIds.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element.type === 'text' || element.type === 'url' || element.tagName === 'SELECT' || element.type === 'number') {
+                        saveData[id] = element.value;
+                    }
+                });
+                
+                let index = JSON.parse(localStorage.getItem(STORAGE_INDEX_KEY)) || [];
+                if (!index.includes(name)) {
+                    index.push(name);
+                }
+                localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(index.sort()));
+                localStorage.setItem(`rental_analysis_${name}`, JSON.stringify(saveData));
+                
+                populateLoadUI();
+                storageButtons.modal.classList.add('hidden');
+                showToast(`Analysis "${name}" saved!`);
+            });
+
+            storageButtons.load.addEventListener('click', () => {
+                const name = storageButtons.select.value;
+                if (!name || name === 'No saved analyses') return;
+
+                const savedData = JSON.parse(localStorage.getItem(`rental_analysis_${name}`));
+                if (savedData) {
+                    savableInputIds.forEach(id => {
+                        if(savedData[id] !== undefined) {
+                            document.getElementById(id).value = savedData[id];
+                        }
+                    });
+                    calculate(); // Recalculate everything with loaded data
+                }
+            });
+
+
+            // --- Initial Setup ---
+            allInputs.forEach(input => input.addEventListener('input', calculate));
+            populateLoadUI();
+            calculate(); // Initial calculation on page load
+        });
+    </script>
+</body>
+</html>
+
