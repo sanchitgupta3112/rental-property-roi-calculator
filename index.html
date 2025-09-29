@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* Custom styles for a better look and feel */
         body {
@@ -264,6 +266,9 @@
                         <button id="saveAnalysisBtn" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Save Current Analysis
                         </button>
+                         <button id="downloadPdfBtn" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            Download Analysis as PDF
+                        </button>
                         <div class="flex items-center space-x-2">
                             <select id="loadAnalysisSelect" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option>No saved analyses</option>
@@ -506,7 +511,8 @@
                 modal: document.getElementById('saveModal'),
                 confirmSave: document.getElementById('saveConfirmBtn'),
                 cancelSave: document.getElementById('saveCancelBtn'),
-                nameInput: document.getElementById('analysisNameInput')
+                nameInput: document.getElementById('analysisNameInput'),
+                download: document.getElementById('downloadPdfBtn'),
             };
 
             const ctx1 = document.getElementById('financialPerformanceChart').getContext('2d');
@@ -943,11 +949,33 @@
                 callGeminiAPI(prompt, true); // Use grounding for real-time data
             });
 
-            // --- Local Storage Save/Load ---
+            // --- Cookie-based Storage & PDF ---
             const STORAGE_INDEX_KEY = 'rental_analyses_index';
 
+            function setCookie(name, value, days) {
+                let expires = "";
+                if (days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                document.cookie = name + "=" + (encodeURIComponent(value) || "") + expires + "; path=/; SameSite=Lax";
+            }
+
+            function getCookie(name) {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(';');
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+                }
+                return null;
+            }
+
             function populateLoadUI() {
-                const index = JSON.parse(localStorage.getItem(STORAGE_INDEX_KEY)) || [];
+                const indexJson = getCookie(STORAGE_INDEX_KEY);
+                const index = indexJson ? JSON.parse(indexJson) : [];
                 storageButtons.select.innerHTML = '';
                 if (index.length === 0) {
                     storageButtons.select.innerHTML = '<option>No saved analyses</option>';
@@ -988,12 +1016,13 @@
                     }
                 });
                 
-                let index = JSON.parse(localStorage.getItem(STORAGE_INDEX_KEY)) || [];
+                const indexJson = getCookie(STORAGE_INDEX_KEY);
+                let index = indexJson ? JSON.parse(indexJson) : [];
                 if (!index.includes(name)) {
                     index.push(name);
                 }
-                localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(index.sort()));
-                localStorage.setItem(`rental_analysis_${name}`, JSON.stringify(saveData));
+                setCookie(STORAGE_INDEX_KEY, JSON.stringify(index.sort()), 365);
+                setCookie(`rental_analysis_${name}`, JSON.stringify(saveData), 365);
                 
                 populateLoadUI();
                 storageButtons.modal.classList.add('hidden');
@@ -1004,8 +1033,9 @@
                 const name = storageButtons.select.value;
                 if (!name || name === 'No saved analyses') return;
 
-                const savedData = JSON.parse(localStorage.getItem(`rental_analysis_${name}`));
-                if (savedData) {
+                const savedDataJson = getCookie(`rental_analysis_${name}`);
+                if (savedDataJson) {
+                    const savedData = JSON.parse(savedDataJson);
                     savableInputIds.forEach(id => {
                         if(savedData[id] !== undefined) {
                             document.getElementById(id).value = savedData[id];
@@ -1014,6 +1044,91 @@
                     calculate(); // Recalculate everything with loaded data
                 }
             });
+
+            async function downloadAsPDF() {
+                showToast('Generating PDF...');
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const margin = 15;
+                const twoCol = 105;
+                let y = 20;
+
+                function addLine(label, value, x1 = margin, x2 = twoCol) {
+                    if (y > 280) { // Add new page if content overflows
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.setFontSize(10).setTextColor(100);
+                    doc.text(label, x1, y);
+                    doc.setFontSize(10).setTextColor(0).setFont(undefined, 'bold');
+                    doc.text(String(value), x2, y);
+                    y += 7;
+                }
+                 function addTitle(title) {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    y += 5;
+                    doc.setFontSize(14).setTextColor(40, 40, 40);
+                    doc.text(title, margin, y);
+                    y += 10;
+                }
+
+                doc.setFontSize(20).setFont(undefined, 'bold');
+                doc.text('Rental Property Analysis Report', margin, y);
+                y += 10;
+                
+                addTitle('Property Details');
+                addLine('Address:', getVal('propertyAddress'));
+                addLine('Listing URL:', getVal('listingLink'));
+
+                addTitle('Key Performance Metrics');
+                addLine('Annualized Return (Total):', outputs.annualizedReturn.textContent);
+                addLine('Total Closing Cash:', outputs.totalCashNeeded.textContent);
+                addLine('Year 1 Interest Paid:', formatCurrency(currentCalculatedData.year1Interest));
+                y+=2;
+                addLine('NOI (Annual):', outputs.noi.textContent);
+                addLine('Cash Flow (Monthly):', outputs.monthlyCashFlow.textContent);
+                addLine('Cash Flow Pre-Principal (Annual):', outputs.cashFlowBeforePrincipal.textContent);
+                y+=2;
+                addLine('Cap Rate:', outputs.capRate.textContent);
+                addLine('Cash on Cash ROI:', outputs.cashOnCashROI.textContent);
+                addLine('Est. Tax Saved (Annual):', outputs.estTaxSaved.textContent);
+
+                addTitle('Purchase & Loan Information');
+                addLine('Purchase Price:', formatCurrency(getVal('purchasePrice')));
+                addLine('Closing Costs:', formatCurrency(currentCalculatedData.closingCosts));
+                addLine('Renovation Costs:', formatCurrency(getVal('renovationCosts')));
+                addLine('Down Payment:', formatCurrency(currentCalculatedData.downPaymentAmount));
+                addLine('Loan Amount:', formatCurrency(currentCalculatedData.loanAmount));
+                addLine('Interest Rate:', `${getVal('interestRate')}%`);
+                addLine('Loan Term:', `${getVal('loanTerm')} years`);
+
+                addTitle('Income & Expenses (Annual)');
+                addLine('Gross Rental Income:', formatCurrency(getVal('monthlyRent') * 12));
+                addLine('Other Income:', formatCurrency(getVal('otherIncome') * 12));
+                addLine('Effective Gross Income:', formatCurrency(currentCalculatedData.effectiveGrossIncome));
+                addLine('Total Operating Expenses:', formatCurrency(currentCalculatedData.totalOperatingExpenses));
+                
+                doc.addPage();
+                y = 20;
+
+                addTitle('10-Year Projections');
+                
+                const chart1Canvas = await html2canvas(document.getElementById('financialPerformanceChart'));
+                const chart1Image = chart1Canvas.toDataURL('image/png', 0.9);
+                doc.addImage(chart1Image, 'PNG', margin, y, 180, 90);
+                y += 100;
+
+                const chart2Canvas = await html2canvas(document.getElementById('wealthGrowthChart'));
+                const chart2Image = chart2Canvas.toDataURL('image/png', 0.9);
+                doc.addImage(chart2Image, 'PNG', margin, y, 180, 90);
+
+                const propertyAddress = getVal('propertyAddress') || 'Untitled Property';
+                doc.save(`Rental Analysis - ${propertyAddress}.pdf`);
+            }
+            storageButtons.download.addEventListener('click', downloadAsPDF);
 
 
             // --- Initial Setup ---
@@ -1024,4 +1139,3 @@
     </script>
 </body>
 </html>
-
